@@ -56,13 +56,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Custom button
-st.markdown("""
-    <label for="real-file" style="background-color:#8e24aa;padding:12px 30px;color:white;border-radius:10px;cursor:pointer;font-weight:bold;">
-        🖼️ Choose Image
-    </label>
-    <input type="file" id="real-file" accept=".jpg,.jpeg,.png" style="display:none;" onchange="document.querySelector('input[type=file]').dispatchEvent(new Event('change'));">
-""", unsafe_allow_html=True)
 
 # Processing
 if uploaded_file is not None:
