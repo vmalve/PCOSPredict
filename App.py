@@ -5,23 +5,38 @@ import torch.nn as nn
 from torchvision import models, transforms
 import os
 import requests
+from streamlit.components.v1 import html
 
-# Configuration
+# --- Device Detection ---
+html("""
+<script>
+    const width = window.innerWidth;
+    const device = width < 768 ? "mobile" : "desktop";
+    window.parent.postMessage({isStreamlitMessage: true, type: "STREAMLIT:SET_COMPONENT_VALUE", value: device}, "*");
+</script>
+""")
+
+device = st.experimental_get_query_params().get("device", ["desktop"])[0]
+if "device" not in st.session_state:
+    st.session_state.device = device
+
+# --- App Configuration ---
+st.set_page_config(page_title="PCOS Predictor", page_icon="🧬")
+
+# --- Model Configuration ---
 MODEL_URL = "https://github.com/vmalve/PCOSPredict/releases/download/v1.0.0/PCOS_resnet18_model.pth"
 MODEL_PATH = "PCOS_resnet18_model.pth"
 CLASS_NAMES = ['No PCOS', 'PCOS']
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Streamlit config
-st.set_page_config(page_title="PCOS Predictor", page_icon="🧬")
-
-# Download model if not present
+# --- Download Model If Missing ---
 if not os.path.exists(MODEL_PATH):
     with st.spinner("🔄 Downloading model..."):
         r = requests.get(MODEL_URL)
         with open(MODEL_PATH, "wb") as f:
             f.write(r.content)
 
+# --- Load Model ---
 @st.cache_resource
 def load_model():
     model = models.resnet18(pretrained=False)
@@ -33,7 +48,7 @@ def load_model():
 
 model = load_model()
 
-# Image pre-processing
+# --- Image Transform ---
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -41,29 +56,24 @@ transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 
-# Header
+# --- Header ---
 st.title("🧬 PCOS Ultrasound Analyzer")
 st.markdown("Upload an **ultrasound image** to detect signs of **Polycystic Ovary Syndrome (PCOS)** using AI.")
 
-# CSS to hide drag-and-drop text
-st.markdown("""
-    <style>
-    /* Remove drag-and-drop prompt text */
-    div[data-testid="stFileUploader"] > label > div {
-        display: none;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# --- Upload UI ---
+if st.session_state.device == "mobile":
+    st.markdown("📱 You're on **mobile** – UI is optimized for small screens.")
+else:
+    st.markdown("💻 You're on **desktop** – full features enabled.")
 
-# Only shows the file select button
-uploaded_file = st.file_uploader("", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("📤 Upload ultrasound image", type=["jpg", "jpeg", "png"])
 
-if uploaded_file is not None:
+# --- Image Prediction Logic ---
+if uploaded_file:
     try:
         image = Image.open(uploaded_file).convert("RGB")
         st.image(image, caption="📷 Uploaded Image", use_column_width=True)
 
-        # Prediction
         with st.spinner("🔍 Analyzing image..."):
             input_tensor = transform(image).unsqueeze(0).to(DEVICE)
             with torch.no_grad():
@@ -76,4 +86,4 @@ if uploaded_file is not None:
         st.info(f"📊 **Confidence:** {confidence * 100:.2f}%")
 
     except Exception:
-        st.error("⚠️ Invalid image file. Please try again.")
+        st.error("⚠️ Invalid image file. Please upload a valid JPEG or PNG.")
