@@ -12,7 +12,7 @@ MODEL_PATH = "PCOS_resnet18_model.pth"
 CLASS_NAMES = ['No PCOS', 'PCOS']
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Set page config
+# Page config
 st.set_page_config(
     page_title="🧬 PCOS Image Predictor",
     page_icon="🩺",
@@ -38,6 +38,9 @@ st.markdown("""
         color: white;
         border-radius: 10px;
         font-weight: bold;
+        font-size: 16px;
+        padding: 10px 24px;
+        margin-top: 10px;
     }
     .card {
         background-color: #f3e5f5;
@@ -55,7 +58,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Download model if not exists
+# Download model if needed
 if not os.path.exists(MODEL_PATH):
     with st.spinner("🔄 Downloading model..."):
         response = requests.get(MODEL_URL)
@@ -82,32 +85,45 @@ transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 
-# UI Content
+# Title and instructions
 st.markdown('<div class="title">🧬 PCOS Ultrasound Analyzer</div>', unsafe_allow_html=True)
-st.markdown('<div class="description">Upload an image to predict<b>Polycystic Ovary Syndrome (PCOS)</b> using AI.</div>', unsafe_allow_html=True)
+st.markdown('<div class="description">Upload an ultrasound image to detect possible signs of <b>Polycystic Ovary Syndrome (PCOS)</b> using AI.</div>', unsafe_allow_html=True)
 
 with st.container():
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
-    uploaded_file = st.file_uploader("📤 Upload an ultrasound image (JPG, JPEG, PNG)", type=["jpg", "jpeg", "png"])
+    # Upload image button only
+    uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
 
-    if uploaded_file:
-        image = Image.open(uploaded_file).convert("RGB")
-        st.image(image, caption="📷 Uploaded Image", use_column_width=True)
+    st.markdown("### 📤 Click below to upload an ultrasound image")
+    upload_button = st.button("🖼️ Choose Image")
 
-        with st.spinner("🧠 Analyzing with AI..."):
-            input_tensor = transform(image).unsqueeze(0).to(DEVICE)
+    if upload_button:
+        st.markdown(
+            "<script>document.querySelector('input[type=file]').click();</script>",
+            unsafe_allow_html=True
+        )
 
-            with torch.no_grad():
-                output = model(input_tensor)
-                _, predicted = torch.max(output, 1)
-                confidence = torch.nn.functional.softmax(output, dim=1)[0][predicted.item()].item()
-                prediction = CLASS_NAMES[predicted.item()]
+    # Prediction logic
+    if uploaded_file is not None:
+        try:
+            image = Image.open(uploaded_file).convert("RGB")
+            st.image(image, caption="📷 Uploaded Image", use_column_width=True)
 
-        st.success(f"✅ **Prediction:** `{prediction}`")
-        st.info(f"📊 **Confidence Score:** `{confidence * 100:.2f}%`")
-    else:
-        st.warning("📎 Please upload a valid image file.")
+            with st.spinner("🧠 Analyzing with AI..."):
+                input_tensor = transform(image).unsqueeze(0).to(DEVICE)
+
+                with torch.no_grad():
+                    output = model(input_tensor)
+                    _, predicted = torch.max(output, 1)
+                    confidence = torch.nn.functional.softmax(output, dim=1)[0][predicted.item()].item()
+                    prediction = CLASS_NAMES[predicted.item()]
+
+            st.success(f"✅ **Prediction:** `{prediction}`")
+            st.info(f"📊 **Confidence Score:** `{confidence * 100:.2f}%`")
+
+        except Exception as e:
+            st.error("📎 Please upload a **valid image file** (JPG, JPEG, PNG).")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
