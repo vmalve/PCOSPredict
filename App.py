@@ -5,9 +5,8 @@ import torch.nn as nn
 from torchvision import models, transforms
 import os
 import requests
-import base64
 
-# Config
+# Configuration
 MODEL_URL = "https://github.com/vmalve/PCOSPredict/releases/download/v1.0.0/PCOS_resnet18_model.pth"
 MODEL_PATH = "PCOS_resnet18_model.pth"
 CLASS_NAMES = ['No PCOS', 'PCOS']
@@ -41,28 +40,30 @@ transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 
+# Page UI
 st.title("🧬 PCOS Ultrasound Analyzer")
 st.markdown("Upload an **ultrasound image** to detect signs of **Polycystic Ovary Syndrome (PCOS)** using AI.")
 
-# Custom upload using HTML input
-uploaded_file = st.file_uploader("Upload your image", type=["jpg", "jpeg", "png"], label_visibility="collapsed", key="real_uploader")
-
-# Hide the default uploader using CSS
+# Hide default drag-and-drop area (only show upload button)
 st.markdown("""
     <style>
+    /* Hide the drag-and-drop area */
     [data-testid="stFileUploader"] > div:first-child {
         display: none;
     }
     </style>
 """, unsafe_allow_html=True)
 
+# Custom upload button
+uploaded_file = st.file_uploader("Upload your image", type=["jpg", "jpeg", "png"], label_visibility="collapsed", key="real_uploader")
 
-# Processing
+# Upload button will trigger the file uploader
 if uploaded_file is not None:
     try:
         image = Image.open(uploaded_file).convert("RGB")
         st.image(image, caption="📷 Uploaded Image", use_column_width=True)
 
+        # Image processing and prediction
         with st.spinner("🔍 Analyzing image..."):
             input_tensor = transform(image).unsqueeze(0).to(DEVICE)
             with torch.no_grad():
@@ -71,6 +72,7 @@ if uploaded_file is not None:
                 confidence = torch.nn.functional.softmax(output, dim=1)[0][predicted.item()].item()
                 prediction = CLASS_NAMES[predicted.item()]
 
+        # Show result
         st.success(f"🧠 **Prediction:** {prediction}")
         st.info(f"📊 **Confidence:** {confidence * 100:.2f}%")
 
