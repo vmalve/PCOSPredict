@@ -16,7 +16,10 @@ html("""
 </script>
 """)
 
-device = st.experimental_get_query_params().get("device", ["desktop"])[0]
+params = st.query_params
+
+
+device = st.query_params.get("device", ["desktop"])[0]
 if "device" not in st.session_state:
     st.session_state.device = device
 
