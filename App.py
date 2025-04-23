@@ -7,32 +7,43 @@ import os
 import requests
 from streamlit.components.v1 import html
 
+# --- App Config ---
+st.set_page_config(
+    page_title="PCOS Predictor",
+    page_icon="🧬",
+    layout="centered"
+)
+
 # --- Device Detection ---
 html("""
 <script>
     const width = window.innerWidth;
     const device = width < 768 ? "mobile" : "desktop";
-    window.parent.postMessage({isStreamlitMessage: true, type: "STREAMLIT:SET_COMPONENT_VALUE", value: device}, "*");
+    window.parent.postMessage(
+        { isStreamlitMessage: true, type: "STREAMLIT:SET_COMPONENT_VALUE", value: device }, "*"
+    );
 </script>
 """)
 
-params = st.query_params
-
-
-device = st.query_params.get("device", ["desktop"])[0]
+query = st.query_params
+device = query.get("device", ["desktop"])[0]
 if "device" not in st.session_state:
     st.session_state.device = device
 
-# --- App Configuration ---
-st.set_page_config(page_title="PCOS Predictor", page_icon="🧬")
+# --- Sidebar ---
+with st.sidebar:
+    st.header("📚 About")
+    st.write("AI-powered tool to analyze ultrasound images for **PCOS**.")
+    st.markdown("[GitHub Repo](https://github.com/vmalve/PCOSPredict)")
+    st.markdown("[Contact Developer](mailto:your@email.com)")
 
-# --- Model Configuration ---
+# --- Model Config ---
 MODEL_URL = "https://github.com/vmalve/PCOSPredict/releases/download/v1.0.0/PCOS_resnet18_model.pth"
 MODEL_PATH = "PCOS_resnet18_model.pth"
 CLASS_NAMES = ['No PCOS', 'PCOS']
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# --- Download Model If Missing ---
+# --- Download Model if Missing ---
 if not os.path.exists(MODEL_PATH):
     with st.spinner("🔄 Downloading model..."):
         r = requests.get(MODEL_URL)
@@ -61,17 +72,16 @@ transform = transforms.Compose([
 
 # --- Header ---
 st.title("🧬 PCOS Ultrasound Analyzer")
-st.markdown("Upload an **ultrasound image** to detect signs of **Polycystic Ovary Syndrome (PCOS)** using AI.")
+st.caption("Upload an ultrasound image to detect signs of Polycystic Ovary Syndrome (PCOS) using AI.")
 
-# --- Upload UI ---
-if st.session_state.device == "mobile":
-    st.markdown("📱 You're on **mobile** – UI is optimized for small screens.")
-else:
-    st.markdown("💻 You're on **desktop** – full features enabled.")
-
+# --- Upload Section ---
+st.markdown(
+    f"You're using a **{st.session_state.device}** device.",
+    help="The app adjusts layout for mobile and desktop."
+)
 uploaded_file = st.file_uploader("📤 Upload ultrasound image", type=["jpg", "jpeg", "png"])
 
-# --- Image Prediction Logic ---
+# --- Prediction ---
 if uploaded_file:
     try:
         image = Image.open(uploaded_file).convert("RGB")
@@ -90,3 +100,9 @@ if uploaded_file:
 
     except Exception:
         st.error("⚠️ Invalid image file. Please upload a valid JPEG or PNG.")
+
+# --- Footer ---
+st.markdown(
+    "<hr style='margin-top: 3em;'><center>Made with ❤️ using Streamlit</center>",
+    unsafe_allow_html=True
+)
