@@ -5,67 +5,24 @@ import torch.nn as nn
 from torchvision import models, transforms
 import os
 import requests
+import base64
 
-# Configuration
+# Config
 MODEL_URL = "https://github.com/vmalve/PCOSPredict/releases/download/v1.0.0/PCOS_resnet18_model.pth"
 MODEL_PATH = "PCOS_resnet18_model.pth"
 CLASS_NAMES = ['No PCOS', 'PCOS']
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Page config
-st.set_page_config(
-    page_title="🧬 PCOS Image Predictor",
-    page_icon="🩺",
-    layout="centered",
-)
-
-# Custom styles
-st.markdown("""
-    <style>
-    .title {
-        text-align: center;
-        font-size: 48px;
-        color: #6a1b9a;
-        font-weight: 700;
-    }
-    .description {
-        text-align: center;
-        font-size: 18px;
-        color: #444;
-    }
-    .stButton>button {
-        background-color: #8e24aa;
-        color: white;
-        border-radius: 10px;
-        font-weight: bold;
-        font-size: 16px;
-        padding: 10px 24px;
-        margin-top: 10px;
-    }
-    .card {
-        background-color: #f3e5f5;
-        padding: 25px;
-        border-radius: 20px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        margin-top: 30px;
-    }
-    .footer {
-        text-align: center;
-        color: #999;
-        font-size: 14px;
-        padding-top: 30px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# Download model if needed
-if not os.path.exists(MODEL_PATH):
-    with st.spinner("🔄 Downloading model..."):
-        response = requests.get(MODEL_URL)
-        with open(MODEL_PATH, "wb") as f:
-            f.write(response.content)
+# Setup
+st.set_page_config(page_title="PCOS Predictor", page_icon="🧬")
 
 # Load model
+if not os.path.exists(MODEL_PATH):
+    with st.spinner("🔄 Downloading model..."):
+        r = requests.get(MODEL_URL)
+        with open(MODEL_PATH, "wb") as f:
+            f.write(r.content)
+
 @st.cache_resource
 def load_model():
     model = models.resnet18(pretrained=False)
@@ -77,7 +34,6 @@ def load_model():
 
 model = load_model()
 
-# Image transform
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -85,47 +41,45 @@ transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 
-# UI
-st.markdown('<div class="title">🧬 PCOS Ultrasound Analyzer</div>', unsafe_allow_html=True)
-st.markdown('<div class="description">Upload an ultrasound image to detect possible signs of <b>Polycystic Ovary Syndrome (PCOS)</b> using AI.</div>', unsafe_allow_html=True)
+st.title("🧬 PCOS Ultrasound Analyzer")
+st.markdown("Upload an **ultrasound image** to detect signs of **Polycystic Ovary Syndrome (PCOS)** using AI.")
 
-st.markdown('<div class="card">', unsafe_allow_html=True)
+# Custom upload using HTML input
+uploaded_file = st.file_uploader("Upload your image", type=["jpg", "jpeg", "png"], label_visibility="collapsed", key="real_uploader")
 
-# Hidden file uploader
-uploaded_file = st.file_uploader("Upload", type=["jpg", "jpeg", "png"], label_visibility="collapsed", key="hidden_uploader")
+# Hide the default uploader using CSS
+st.markdown("""
+    <style>
+    [data-testid="stFileUploader"] > div:first-child {
+        display: none;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# Button to trigger uploader
-st.markdown("### 📤 Click below to upload an ultrasound image")
-if st.button("🖼️ Choose Image"):
-    st.markdown("""
-        <script>
-        const fileInput = window.parent.document.querySelector('input[type="file"]');
-        fileInput.click();
-        </script>
-    """, unsafe_allow_html=True)
+# Custom button
+st.markdown("""
+    <label for="real-file" style="background-color:#8e24aa;padding:12px 30px;color:white;border-radius:10px;cursor:pointer;font-weight:bold;">
+        🖼️ Choose Image
+    </label>
+    <input type="file" id="real-file" accept=".jpg,.jpeg,.png" style="display:none;" onchange="document.querySelector('input[type=file]').dispatchEvent(new Event('change'));">
+""", unsafe_allow_html=True)
 
-# Prediction logic
+# Processing
 if uploaded_file is not None:
     try:
         image = Image.open(uploaded_file).convert("RGB")
         st.image(image, caption="📷 Uploaded Image", use_column_width=True)
 
-        with st.spinner("🧠 Analyzing with AI..."):
+        with st.spinner("🔍 Analyzing image..."):
             input_tensor = transform(image).unsqueeze(0).to(DEVICE)
-
             with torch.no_grad():
                 output = model(input_tensor)
                 _, predicted = torch.max(output, 1)
                 confidence = torch.nn.functional.softmax(output, dim=1)[0][predicted.item()].item()
                 prediction = CLASS_NAMES[predicted.item()]
 
-        st.success(f"✅ **Prediction:** `{prediction}`")
-        st.info(f"📊 **Confidence Score:** `{confidence * 100:.2f}%`")
+        st.success(f"🧠 **Prediction:** {prediction}")
+        st.info(f"📊 **Confidence:** {confidence * 100:.2f}%")
 
     except Exception:
-        st.error("📎 Please upload a **valid image file** (JPG, JPEG, PNG).")
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Footer
-st.markdown('<div class="footer">💡 Built with ResNet18, PyTorch, and Streamlit · Made with ❤️ by the AI community</div>', unsafe_allow_html=True)
+        st.error("⚠️ Invalid image file. Please try again.")
