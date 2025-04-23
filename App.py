@@ -44,20 +44,19 @@ transform = transforms.Compose([
 st.title("🧬 PCOS Ultrasound Analyzer")
 st.markdown("Upload an **ultrasound image** to detect signs of **Polycystic Ovary Syndrome (PCOS)** using AI.")
 
-# Custom CSS to hide the drag-and-drop area
+# Hide the default Streamlit uploader (both drag-and-drop and file button)
 st.markdown("""
     <style>
-    /* Hide the drag-and-drop area */
-    .css-1l7xkn2 {
-        display: none;
-    }
     .stFileUploader > div:first-child {
-        display: none;
+        display: none; /* Hide the default drag and drop and file button */
+    }
+    .stFileUploader {
+        visibility: hidden; /* Hide the entire default file uploader */
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Custom HTML for file upload button
+# Custom HTML and JS to trigger file upload
 st.markdown("""
     <label for="real-file" style="background-color:#8e24aa;padding:12px 30px;color:white;border-radius:10px;cursor:pointer;font-weight:bold;">
         🖼️ Choose Image
@@ -65,7 +64,7 @@ st.markdown("""
     <input type="file" id="real-file" accept=".jpg,.jpeg,.png" style="display:none;" onchange="document.querySelector('input[type=file]').dispatchEvent(new Event('change'));">
 """, unsafe_allow_html=True)
 
-# Get file input
+# Trigger file upload via Streamlit’s file uploader
 uploaded_file = st.file_uploader("", type=["jpg", "jpeg", "png"], label_visibility="collapsed", key="real_uploader")
 
 # Process the image if uploaded
