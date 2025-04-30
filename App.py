@@ -15,6 +15,15 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Streamlit config
 st.set_page_config(page_title="PCOS Predictor", page_icon="🧬")
 
+# Hide Streamlit UI elements like GitHub link, menu, and footer
+st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+""", unsafe_allow_html=True)
+
 # Download model if not present
 if not os.path.exists(MODEL_PATH):
     with st.spinner("🔄 Downloading model..."):
