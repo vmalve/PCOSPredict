@@ -9,7 +9,7 @@ import requests
 # Configuration
 MODEL_URL = "https://github.com/vmalve/PCOSPredict/releases/download/v1.0.0/PCOS_resnet18_model.pth"
 MODEL_PATH = "PCOS_resnet18_model.pth"
-CLASS_NAMES = ['No PCOS', 'PCOS']
+CLASS_NAMES = ['PCOS', 'No PCOS']
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Streamlit config
